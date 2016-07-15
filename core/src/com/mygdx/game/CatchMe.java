@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -39,15 +40,21 @@ public class CatchMe extends ApplicationAdapter implements InputProcessor {
 	long score = 0;
 
 	int PADDING_SIZE = 10;
-	
+
+	Sound successSound;
+	Sound failureSound;
+	Sound gameOverSound;
+
+	boolean isGameOver = false;
+
 	@Override
 	public void create () {
 		batch = new SpriteBatch();
 		font = new BitmapFont(Gdx.files.internal("raavi_black.fnt"));
 		myText = "LEVEL ";
 
-		img = new Texture("location_pointer.png");
-		gameOverImg = new Texture("game_over.png");
+		img = new Texture(Gdx.files.internal("location_pointer.png"));
+		gameOverImg = new Texture(Gdx.files.internal("game_over.png"));
 		sprite = new Sprite(img);
 		gameOverSprite = new Sprite(gameOverImg);
 
@@ -64,6 +71,13 @@ public class CatchMe extends ApplicationAdapter implements InputProcessor {
 				Gdx.graphics.getHeight() / 2 - gameOverImg.getHeight() / 2
 		);
 
+		successSound = Gdx.audio.newSound(Gdx.files.internal("success.wav"));
+		failureSound = Gdx.audio.newSound(Gdx.files.internal("failure.wav"));
+		gameOverSound = Gdx.audio.newSound(Gdx.files.internal("game_over.wav"));
+
+		Gdx.graphics.setContinuousRendering(false);
+		Gdx.graphics.requestRendering();
+
 		Gdx.input.setInputProcessor(this);
 	}
 
@@ -77,6 +91,10 @@ public class CatchMe extends ApplicationAdapter implements InputProcessor {
 
 			batch.begin();
 			batch.draw(gameOverSprite, gameOverSprite.getX(), gameOverSprite.getY());
+			if (!isGameOver) {
+				gameOverSound.play();
+			}
+			isGameOver = true;
 			batch.end();
 
 		} else {
@@ -111,9 +129,11 @@ public class CatchMe extends ApplicationAdapter implements InputProcessor {
 			frame++;
 
 			batch.end();
+
+			Gdx.graphics.requestRendering();
 		}
 	}
-	
+
 	@Override
 	public void dispose () {
 		batch.dispose();
@@ -137,7 +157,7 @@ public class CatchMe extends ApplicationAdapter implements InputProcessor {
 
 	@Override
 	public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-		if (button == Input.Buttons.LEFT) {
+		if (button == Input.Buttons.LEFT && !isGameOver) {
 
 			// TODO: why "sprite.getX()" should be used instead of "coordinateX"?
 			if (Gdx.graphics.getHeight() - screenY - coordinateY >= 0 && Gdx.graphics.getHeight() - screenY - coordinateY <= sprite.getHeight()
@@ -145,9 +165,13 @@ public class CatchMe extends ApplicationAdapter implements InputProcessor {
 				clicksCount++;
 				score += timeCountDown;
 				lastClick = TimeUtils.millis();
+				successSound.play();
+			} else {
+				failureSound.play(10.0f);
 			}
 
-		} else if (button == Input.Buttons.RIGHT) {
+		} else if (button == Input.Buttons.RIGHT && isGameOver) {
+			isGameOver = false;
 			frame = 0;
 			score = 0;
 			clicksCount = 0;
